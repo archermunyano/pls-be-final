@@ -1,7 +1,5 @@
-'use strict';
-
-var cst = require('./cst.js');
-var lexer = require('./lexer.js');
+import { tokenType } from './cst.js';
+import { Lexer } from './lexer.js';
 
 function includesToken(list, type) {
     for (let i = 0; i < list.length; ++i)
@@ -142,7 +140,7 @@ class Parser {
         /** The type of the current token, set in parse() */
         this.type = '';
         // Must be defined after `next()`
-        this.lexer = new lexer.Lexer();
+        this.lexer = new Lexer();
         this.onNewLine = onNewLine;
     }
     /**
@@ -166,15 +164,13 @@ class Parser {
      */
     *next(source) {
         this.source = source;
-        if (process.env.LOG_TOKENS)
-            console.log('|', cst.prettyToken(source));
         if (this.atScalar) {
             this.atScalar = false;
             yield* this.step();
             this.offset += source.length;
             return;
         }
-        const type = cst.tokenType(source);
+        const type = tokenType(source);
         if (!type) {
             const message = `Not a YAML token: ${source}`;
             yield* this.pop({ type: 'error', offset: this.offset, message, source });
@@ -955,4 +951,4 @@ class Parser {
     }
 }
 
-exports.Parser = Parser;
+export { Parser };

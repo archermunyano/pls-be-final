@@ -1,19 +1,17 @@
-'use strict';
-
-var identity = require('../../nodes/identity.js');
-var YAMLMap = require('../../nodes/YAMLMap.js');
+import { isMap } from '../../nodes/identity.js';
+import { YAMLMap } from '../../nodes/YAMLMap.js';
 
 const map = {
     collection: 'map',
     default: true,
-    nodeClass: YAMLMap.YAMLMap,
+    nodeClass: YAMLMap,
     tag: 'tag:yaml.org,2002:map',
     resolve(map, onError) {
-        if (!identity.isMap(map))
+        if (!isMap(map))
             onError('Expected a mapping for this tag');
         return map;
     },
-    createNode: (schema, obj, ctx) => YAMLMap.YAMLMap.from(schema, obj, ctx)
+    createNode: (schema, obj, ctx) => YAMLMap.from(schema, obj, ctx)
 };
 
-exports.map = map;
+export { map };

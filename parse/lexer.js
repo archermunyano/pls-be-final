@@ -1,6 +1,4 @@
-'use strict';
-
-var cst = require('./cst.js');
+import { BOM, DOCUMENT, FLOW_END, SCALAR } from './cst.js';
 
 /*
 START -> stream
@@ -246,7 +244,7 @@ class Lexer {
         let line = this.getLine();
         if (line === null)
             return this.setNext('stream');
-        if (line[0] === cst.BOM) {
+        if (line[0] === BOM) {
             yield* this.pushCount(1);
             line = line.substring(1);
         }
@@ -281,7 +279,7 @@ class Lexer {
             yield* this.pushNewline();
             return 'stream';
         }
-        yield cst.DOCUMENT;
+        yield DOCUMENT;
         return yield* this.parseLineStart();
     }
     *parseLineStart() {
@@ -387,7 +385,7 @@ class Lexer {
             if (!atFlowEndMarker) {
                 // this is an error
                 this.flowLevel = 0;
-                yield cst.FLOW_END;
+                yield FLOW_END;
                 return yield* this.parseLineStart();
             }
         }
@@ -565,7 +563,7 @@ class Lexer {
                     break;
             } while (true);
         }
-        yield cst.SCALAR;
+        yield SCALAR;
         yield* this.pushToIndex(nl + 1, true);
         return yield* this.parseLineStart();
     }
@@ -609,7 +607,7 @@ class Lexer {
         }
         if (!ch && !this.atEnd)
             return this.setNext('plain-scalar');
-        yield cst.SCALAR;
+        yield SCALAR;
         yield* this.pushToIndex(end + 1, true);
         return inFlow ? 'flow' : 'doc';
     }
@@ -716,4 +714,4 @@ class Lexer {
     }
 }
 
-exports.Lexer = Lexer;
+export { Lexer };

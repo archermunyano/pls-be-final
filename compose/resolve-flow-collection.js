@@ -1,20 +1,18 @@
-'use strict';
-
-var identity = require('../nodes/identity.js');
-var Pair = require('../nodes/Pair.js');
-var YAMLMap = require('../nodes/YAMLMap.js');
-var YAMLSeq = require('../nodes/YAMLSeq.js');
-var resolveEnd = require('./resolve-end.js');
-var resolveProps = require('./resolve-props.js');
-var utilContainsNewline = require('./util-contains-newline.js');
-var utilMapIncludes = require('./util-map-includes.js');
+import { isPair } from '../nodes/identity.js';
+import { Pair } from '../nodes/Pair.js';
+import { YAMLMap } from '../nodes/YAMLMap.js';
+import { YAMLSeq } from '../nodes/YAMLSeq.js';
+import { resolveEnd } from './resolve-end.js';
+import { resolveProps } from './resolve-props.js';
+import { containsNewline } from './util-contains-newline.js';
+import { mapIncludes } from './util-map-includes.js';
 
 const blockMsg = 'Block collections are not allowed within flow collections';
 const isBlock = (token) => token && (token.type === 'block-map' || token.type === 'block-seq');
 function resolveFlowCollection({ composeNode, composeEmptyNode }, ctx, fc, onError, tag) {
     const isMap = fc.start.source === '{';
     const fcName = isMap ? 'flow map' : 'flow sequence';
-    const NodeClass = (tag?.nodeClass ?? (isMap ? YAMLMap.YAMLMap : YAMLSeq.YAMLSeq));
+    const NodeClass = (tag?.nodeClass ?? (isMap ? YAMLMap : YAMLSeq));
     const coll = new NodeClass(ctx.schema);
     coll.flow = true;
     const atRoot = ctx.atRoot;
@@ -26,7 +24,7 @@ function resolveFlowCollection({ composeNode, composeEmptyNode }, ctx, fc, onErr
     for (let i = 0; i < fc.items.length; ++i) {
         const collItem = fc.items[i];
         const { start, key, sep, value } = collItem;
-        const props = resolveProps.resolveProps(start, {
+        const props = resolveProps(start, {
             flow: fcName,
             indicator: 'explicit-key-ind',
             next: key ?? sep?.[0],
@@ -50,7 +48,7 @@ function resolveFlowCollection({ composeNode, composeEmptyNode }, ctx, fc, onErr
                 offset = props.end;
                 continue;
             }
-            if (!isMap && ctx.options.strict && utilContainsNewline.containsNewline(key))
+            if (!isMap && ctx.options.strict && containsNewline(key))
                 onError(key, // checked by containsNewline()
                 'MULTILINE_IMPLICIT_KEY', 'Implicit keys of flow sequence pairs need to be on a single line');
         }
@@ -77,7 +75,7 @@ function resolveFlowCollection({ composeNode, composeEmptyNode }, ctx, fc, onErr
                 }
                 if (prevItemComment) {
                     let prev = coll.items[coll.items.length - 1];
-                    if (identity.isPair(prev))
+                    if (isPair(prev))
                         prev = prev.value ?? prev.key;
                     if (prev.comment)
                         prev.comment += '\n' + prevItemComment;
@@ -110,7 +108,7 @@ function resolveFlowCollection({ composeNode, composeEmptyNode }, ctx, fc, onErr
                 onError(keyNode.range, 'BLOCK_IN_FLOW', blockMsg);
             ctx.atKey = false;
             // value properties
-            const valueProps = resolveProps.resolveProps(sep ?? [], {
+            const valueProps = resolveProps(sep ?? [], {
                 flow: fcName,
                 indicator: 'map-value-ind',
                 next: value,
@@ -156,17 +154,17 @@ function resolveFlowCollection({ composeNode, composeEmptyNode }, ctx, fc, onErr
                 else
                     keyNode.comment = valueProps.comment;
             }
-            const pair = new Pair.Pair(keyNode, valueNode);
+            const pair = new Pair(keyNode, valueNode);
             if (ctx.options.keepSourceTokens)
                 pair.srcToken = collItem;
             if (isMap) {
                 const map = coll;
-                if (utilMapIncludes.mapIncludes(ctx, map.items, keyNode))
+                if (mapIncludes(ctx, map.items, keyNode))
                     onError(keyStart, 'DUPLICATE_KEY', 'Map keys must be unique');
                 map.items.push(pair);
             }
             else {
-                const map = new YAMLMap.YAMLMap(ctx.schema);
+                const map = new YAMLMap(ctx.schema);
                 map.flow = true;
                 map.items.push(pair);
                 const endRange = (valueNode ?? keyNode).range;
@@ -191,7 +189,7 @@ function resolveFlowCollection({ composeNode, composeEmptyNode }, ctx, fc, onErr
             ee.unshift(ce);
     }
     if (ee.length > 0) {
-        const end = resolveEnd.resolveEnd(ee, cePos, ctx.options.strict, onError);
+        const end = resolveEnd(ee, cePos, ctx.options.strict, onError);
         if (end.comment) {
             if (coll.comment)
                 coll.comment += '\n' + end.comment;
@@ -206,4 +204,4 @@ function resolveFlowCollection({ composeNode, composeEmptyNode }, ctx, fc, onErr
     return coll;
 }
 
-exports.resolveFlowCollection = resolveFlowCollection;
+export { resolveFlowCollection };

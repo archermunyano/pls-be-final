@@ -1,14 +1,12 @@
-'use strict';
-
-var anchors = require('../doc/anchors.js');
-var identity = require('../nodes/identity.js');
-var stringifyComment = require('./stringifyComment.js');
-var stringifyString = require('./stringifyString.js');
+import { anchorIsValid } from '../doc/anchors.js';
+import { isPair, isAlias, isNode, isScalar, isCollection } from '../nodes/identity.js';
+import { stringifyComment } from './stringifyComment.js';
+import { stringifyString } from './stringifyString.js';
 
 function createStringifyContext(doc, options) {
     const opt = Object.assign({
         blockQuote: true,
-        commentString: stringifyComment.stringifyComment,
+        commentString: stringifyComment,
         defaultKeyType: null,
         defaultStringType: 'PLAIN',
         directives: null,
@@ -54,7 +52,7 @@ function getTagObject(tags, item) {
     }
     let tagObj = undefined;
     let obj;
-    if (identity.isScalar(item)) {
+    if (isScalar(item)) {
         obj = item.value;
         let match = tags.filter(t => t.identify?.(obj));
         if (match.length > 1) {
@@ -76,13 +74,13 @@ function getTagObject(tags, item) {
     return tagObj;
 }
 // needs to be called before value stringifier to allow for circular anchor refs
-function stringifyProps(node, tagObj, { anchors: anchors$1, doc }) {
+function stringifyProps(node, tagObj, { anchors, doc }) {
     if (!doc.directives)
         return '';
     const props = [];
-    const anchor = (identity.isScalar(node) || identity.isCollection(node)) && node.anchor;
-    if (anchor && anchors.anchorIsValid(anchor)) {
-        anchors$1.add(anchor);
+    const anchor = (isScalar(node) || isCollection(node)) && node.anchor;
+    if (anchor && anchorIsValid(anchor)) {
+        anchors.add(anchor);
         props.push(`&${anchor}`);
     }
     const tag = node.tag ? node.tag : tagObj.default ? null : tagObj.tag;
@@ -91,9 +89,9 @@ function stringifyProps(node, tagObj, { anchors: anchors$1, doc }) {
     return props.join(' ');
 }
 function stringify(item, ctx, onComment, onChompKeep) {
-    if (identity.isPair(item))
+    if (isPair(item))
         return item.toString(ctx, onComment, onChompKeep);
-    if (identity.isAlias(item)) {
+    if (isAlias(item)) {
         if (ctx.doc.directives)
             return item.toString(ctx);
         if (ctx.resolvedAliases?.has(item)) {
@@ -108,7 +106,7 @@ function stringify(item, ctx, onComment, onChompKeep) {
         }
     }
     let tagObj = undefined;
-    const node = identity.isNode(item)
+    const node = isNode(item)
         ? item
         : ctx.doc.createNode(item, { onTagObj: o => (tagObj = o) });
     if (!tagObj)
@@ -118,15 +116,14 @@ function stringify(item, ctx, onComment, onChompKeep) {
         ctx.indentAtStart = (ctx.indentAtStart ?? 0) + props.length + 1;
     const str = typeof tagObj.stringify === 'function'
         ? tagObj.stringify(node, ctx, onComment, onChompKeep)
-        : identity.isScalar(node)
-            ? stringifyString.stringifyString(node, ctx, onComment, onChompKeep)
+        : isScalar(node)
+            ? stringifyString(node, ctx, onComment, onChompKeep)
             : node.toString(ctx, onComment, onChompKeep);
     if (!props)
         return str;
-    return identity.isScalar(node) || str[0] === '{' || str[0] === '['
+    return isScalar(node) || str[0] === '{' || str[0] === '['
         ? `${props} ${str}`
         : `${props}\n${ctx.indent}${str}`;
 }
 
-exports.createStringifyContext = createStringifyContext;
-exports.stringify = stringify;
+export { createStringifyContext, stringify };

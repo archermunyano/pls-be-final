@@ -1,16 +1,14 @@
-'use strict';
-
-var Alias = require('../nodes/Alias.js');
-var Collection = require('../nodes/Collection.js');
-var identity = require('../nodes/identity.js');
-var Pair = require('../nodes/Pair.js');
-var toJS = require('../nodes/toJS.js');
-var Schema = require('../schema/Schema.js');
-var stringifyDocument = require('../stringify/stringifyDocument.js');
-var anchors = require('./anchors.js');
-var applyReviver = require('./applyReviver.js');
-var createNode = require('./createNode.js');
-var directives = require('./directives.js');
+import { Alias } from '../nodes/Alias.js';
+import { isEmptyPath, collectionFromPath } from '../nodes/Collection.js';
+import { NODE_TYPE, DOC, isNode, isCollection, isScalar } from '../nodes/identity.js';
+import { Pair } from '../nodes/Pair.js';
+import { toJS } from '../nodes/toJS.js';
+import { Schema } from '../schema/Schema.js';
+import { stringifyDocument } from '../stringify/stringifyDocument.js';
+import { anchorNames, findNewAnchor, createNodeAnchors } from './anchors.js';
+import { applyReviver } from './applyReviver.js';
+import { createNode } from './createNode.js';
+import { Directives } from './directives.js';
 
 class Document {
     constructor(value, replacer, options) {
@@ -22,7 +20,7 @@ class Document {
         this.errors = [];
         /** Warnings encountered during parsing. */
         this.warnings = [];
-        Object.defineProperty(this, identity.NODE_TYPE, { value: identity.DOC });
+        Object.defineProperty(this, NODE_TYPE, { value: DOC });
         let _replacer = null;
         if (typeof replacer === 'function' || Array.isArray(replacer)) {
             _replacer = replacer;
@@ -49,7 +47,7 @@ class Document {
                 version = this.directives.yaml.version;
         }
         else
-            this.directives = new directives.Directives({ version });
+            this.directives = new Directives({ version });
         this.setSchema(version, options);
         // @ts-expect-error We can't really know that this matches Contents.
         this.contents =
@@ -62,7 +60,7 @@ class Document {
      */
     clone() {
         const copy = Object.create(Document.prototype, {
-            [identity.NODE_TYPE]: { value: identity.DOC }
+            [NODE_TYPE]: { value: DOC }
         });
         copy.commentBefore = this.commentBefore;
         copy.comment = this.comment;
@@ -73,7 +71,7 @@ class Document {
             copy.directives = this.directives.clone();
         copy.schema = this.schema.clone();
         // @ts-expect-error We can't really know that this matches Contents.
-        copy.contents = identity.isNode(this.contents)
+        copy.contents = isNode(this.contents)
             ? this.contents.clone(copy.schema)
             : this.contents;
         if (this.range)
@@ -101,12 +99,12 @@ class Document {
      */
     createAlias(node, name) {
         if (!node.anchor) {
-            const prev = anchors.anchorNames(this);
+            const prev = anchorNames(this);
             node.anchor =
                 // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-                !name || prev.has(name) ? anchors.findNewAnchor(name || 'a', prev) : name;
+                !name || prev.has(name) ? findNewAnchor(name || 'a', prev) : name;
         }
-        return new Alias.Alias(node.anchor);
+        return new Alias(node.anchor);
     }
     createNode(value, replacer, options) {
         let _replacer = undefined;
@@ -126,7 +124,7 @@ class Document {
             replacer = undefined;
         }
         const { aliasDuplicateObjects, anchorPrefix, flow, keepUndefined, onTagObj, tag } = options ?? {};
-        const { onAnchor, setAnchors, sourceObjects } = anchors.createNodeAnchors(this, 
+        const { onAnchor, setAnchors, sourceObjects } = createNodeAnchors(this, 
         // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
         anchorPrefix || 'a');
         const ctx = {
@@ -138,8 +136,8 @@ class Document {
             schema: this.schema,
             sourceObjects
         };
-        const node = createNode.createNode(value, tag, ctx);
-        if (flow && identity.isCollection(node))
+        const node = createNode(value, tag, ctx);
+        if (flow && isCollection(node))
             node.flow = true;
         setAnchors();
         return node;
@@ -151,7 +149,7 @@ class Document {
     createPair(key, value, options = {}) {
         const k = this.createNode(key, null, options);
         const v = this.createNode(value, null, options);
-        return new Pair.Pair(k, v);
+        return new Pair(k, v);
     }
     /**
      * Removes a value from the document.
@@ -165,7 +163,7 @@ class Document {
      * @returns `true` if the item was found and removed.
      */
     deleteIn(path) {
-        if (Collection.isEmptyPath(path)) {
+        if (isEmptyPath(path)) {
             if (this.contents == null)
                 return false;
             // @ts-expect-error Presumed impossible if Strict extends false
@@ -182,7 +180,7 @@ class Document {
      * `true` (collections are always returned intact).
      */
     get(key, keepScalar) {
-        return identity.isCollection(this.contents)
+        return isCollection(this.contents)
             ? this.contents.get(key, keepScalar)
             : undefined;
     }
@@ -192,11 +190,11 @@ class Document {
      * `true` (collections are always returned intact).
      */
     getIn(path, keepScalar) {
-        if (Collection.isEmptyPath(path))
-            return !keepScalar && identity.isScalar(this.contents)
+        if (isEmptyPath(path))
+            return !keepScalar && isScalar(this.contents)
                 ? this.contents.value
                 : this.contents;
-        return identity.isCollection(this.contents)
+        return isCollection(this.contents)
             ? this.contents.getIn(path, keepScalar)
             : undefined;
     }
@@ -204,15 +202,15 @@ class Document {
      * Checks if the document includes a value with the key `key`.
      */
     has(key) {
-        return identity.isCollection(this.contents) ? this.contents.has(key) : false;
+        return isCollection(this.contents) ? this.contents.has(key) : false;
     }
     /**
      * Checks if the document includes a value at `path`.
      */
     hasIn(path) {
-        if (Collection.isEmptyPath(path))
+        if (isEmptyPath(path))
             return this.contents !== undefined;
-        return identity.isCollection(this.contents) ? this.contents.hasIn(path) : false;
+        return isCollection(this.contents) ? this.contents.hasIn(path) : false;
     }
     /**
      * Sets a value in this document. For `!!set`, `value` needs to be a
@@ -221,7 +219,7 @@ class Document {
     set(key, value) {
         if (this.contents == null) {
             // @ts-expect-error We can't really know that this matches Contents.
-            this.contents = Collection.collectionFromPath(this.schema, [key], value);
+            this.contents = collectionFromPath(this.schema, [key], value);
         }
         else if (assertCollection(this.contents)) {
             this.contents.set(key, value);
@@ -232,13 +230,13 @@ class Document {
      * boolean to add/remove the item from the set.
      */
     setIn(path, value) {
-        if (Collection.isEmptyPath(path)) {
+        if (isEmptyPath(path)) {
             // @ts-expect-error We can't really know that this matches Contents.
             this.contents = value;
         }
         else if (this.contents == null) {
             // @ts-expect-error We can't really know that this matches Contents.
-            this.contents = Collection.collectionFromPath(this.schema, Array.from(path), value);
+            this.contents = collectionFromPath(this.schema, Array.from(path), value);
         }
         else if (assertCollection(this.contents)) {
             this.contents.setIn(path, value);
@@ -260,7 +258,7 @@ class Document {
                 if (this.directives)
                     this.directives.yaml.version = '1.1';
                 else
-                    this.directives = new directives.Directives({ version: '1.1' });
+                    this.directives = new Directives({ version: '1.1' });
                 opt = { resolveKnownTags: false, schema: 'yaml-1.1' };
                 break;
             case '1.2':
@@ -268,7 +266,7 @@ class Document {
                 if (this.directives)
                     this.directives.yaml.version = version;
                 else
-                    this.directives = new directives.Directives({ version });
+                    this.directives = new Directives({ version });
                 opt = { resolveKnownTags: true, schema: 'core' };
                 break;
             case null:
@@ -285,7 +283,7 @@ class Document {
         if (options.schema instanceof Object)
             this.schema = options.schema;
         else if (opt)
-            this.schema = new Schema.Schema(Object.assign(opt, options));
+            this.schema = new Schema(Object.assign(opt, options));
         else
             throw new Error(`With a null YAML version, the { schema: Schema } option is required`);
     }
@@ -299,12 +297,12 @@ class Document {
             mapKeyWarned: false,
             maxAliasCount: typeof maxAliasCount === 'number' ? maxAliasCount : 100
         };
-        const res = toJS.toJS(this.contents, jsonArg ?? '', ctx);
+        const res = toJS(this.contents, jsonArg ?? '', ctx);
         if (typeof onAnchor === 'function')
             for (const { count, res } of ctx.anchors.values())
                 onAnchor(res, count);
         return typeof reviver === 'function'
-            ? applyReviver.applyReviver(reviver, { '': res }, '', res)
+            ? applyReviver(reviver, { '': res }, '', res)
             : res;
     }
     /**
@@ -325,13 +323,13 @@ class Document {
             const s = JSON.stringify(options.indent);
             throw new Error(`"indent" option must be a positive integer, not ${s}`);
         }
-        return stringifyDocument.stringifyDocument(this, options);
+        return stringifyDocument(this, options);
     }
 }
 function assertCollection(contents) {
-    if (identity.isCollection(contents))
+    if (isCollection(contents))
         return true;
     throw new Error('Expected a YAML collection as document contents');
 }
 
-exports.Document = Document;
+export { Document };

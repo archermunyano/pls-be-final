@@ -1,27 +1,25 @@
-'use strict';
+import { isMap, isPair, isScalar } from '../../nodes/identity.js';
+import { Pair, createPair } from '../../nodes/Pair.js';
+import { YAMLMap, findPair } from '../../nodes/YAMLMap.js';
 
-var identity = require('../../nodes/identity.js');
-var Pair = require('../../nodes/Pair.js');
-var YAMLMap = require('../../nodes/YAMLMap.js');
-
-class YAMLSet extends YAMLMap.YAMLMap {
+class YAMLSet extends YAMLMap {
     constructor(schema) {
         super(schema);
         this.tag = YAMLSet.tag;
     }
     add(key) {
         let pair;
-        if (identity.isPair(key))
+        if (isPair(key))
             pair = key;
         else if (key &&
             typeof key === 'object' &&
             'key' in key &&
             'value' in key &&
             key.value === null)
-            pair = new Pair.Pair(key.key, null);
+            pair = new Pair(key.key, null);
         else
-            pair = new Pair.Pair(key, null);
-        const prev = YAMLMap.findPair(this.items, pair.key);
+            pair = new Pair(key, null);
+        const prev = findPair(this.items, pair.key);
         if (!prev)
             this.items.push(pair);
     }
@@ -30,9 +28,9 @@ class YAMLSet extends YAMLMap.YAMLMap {
      * Otherwise, returns the value of that Pair's key.
      */
     get(key, keepPair) {
-        const pair = YAMLMap.findPair(this.items, key);
-        return !keepPair && identity.isPair(pair)
-            ? identity.isScalar(pair.key)
+        const pair = findPair(this.items, key);
+        return !keepPair && isPair(pair)
+            ? isScalar(pair.key)
                 ? pair.key.value
                 : pair.key
             : pair;
@@ -40,12 +38,12 @@ class YAMLSet extends YAMLMap.YAMLMap {
     set(key, value) {
         if (typeof value !== 'boolean')
             throw new Error(`Expected boolean value for set(key, value) in a YAML set, not ${typeof value}`);
-        const prev = YAMLMap.findPair(this.items, key);
+        const prev = findPair(this.items, key);
         if (prev && !value) {
             this.items.splice(this.items.indexOf(prev), 1);
         }
         else if (!prev && value) {
-            this.items.push(new Pair.Pair(key));
+            this.items.push(new Pair(key));
         }
     }
     toJSON(_, ctx) {
@@ -66,7 +64,7 @@ class YAMLSet extends YAMLMap.YAMLMap {
             for (let value of iterable) {
                 if (typeof replacer === 'function')
                     value = replacer.call(iterable, value, value);
-                set.items.push(Pair.createPair(value, null, ctx));
+                set.items.push(createPair(value, null, ctx));
             }
         return set;
     }
@@ -80,7 +78,7 @@ const set = {
     tag: 'tag:yaml.org,2002:set',
     createNode: (schema, iterable, ctx) => YAMLSet.from(schema, iterable, ctx),
     resolve(map, onError) {
-        if (identity.isMap(map)) {
+        if (isMap(map)) {
             if (map.hasAllNullValues(true))
                 return Object.assign(new YAMLSet(), map);
             else
@@ -92,5 +90,4 @@ const set = {
     }
 };
 
-exports.YAMLSet = YAMLSet;
-exports.set = set;
+export { YAMLSet, set };

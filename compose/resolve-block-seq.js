@@ -1,11 +1,9 @@
-'use strict';
-
-var YAMLSeq = require('../nodes/YAMLSeq.js');
-var resolveProps = require('./resolve-props.js');
-var utilFlowIndentCheck = require('./util-flow-indent-check.js');
+import { YAMLSeq } from '../nodes/YAMLSeq.js';
+import { resolveProps } from './resolve-props.js';
+import { flowIndentCheck } from './util-flow-indent-check.js';
 
 function resolveBlockSeq({ composeNode, composeEmptyNode }, ctx, bs, onError, tag) {
-    const NodeClass = tag?.nodeClass ?? YAMLSeq.YAMLSeq;
+    const NodeClass = tag?.nodeClass ?? YAMLSeq;
     const seq = new NodeClass(ctx.schema);
     if (ctx.atRoot)
         ctx.atRoot = false;
@@ -14,7 +12,7 @@ function resolveBlockSeq({ composeNode, composeEmptyNode }, ctx, bs, onError, ta
     let offset = bs.offset;
     let commentEnd = null;
     for (const { start, value } of bs.items) {
-        const props = resolveProps.resolveProps(start, {
+        const props = resolveProps(start, {
             indicator: 'seq-item-ind',
             next: value,
             offset,
@@ -40,7 +38,7 @@ function resolveBlockSeq({ composeNode, composeEmptyNode }, ctx, bs, onError, ta
             ? composeNode(ctx, value, props, onError)
             : composeEmptyNode(ctx, props.end, start, null, props, onError);
         if (ctx.schema.compat)
-            utilFlowIndentCheck.flowIndentCheck(bs.indent, value, onError);
+            flowIndentCheck(bs.indent, value, onError);
         offset = node.range[2];
         seq.items.push(node);
     }
@@ -48,4 +46,4 @@ function resolveBlockSeq({ composeNode, composeEmptyNode }, ctx, bs, onError, ta
     return seq;
 }
 
-exports.resolveBlockSeq = resolveBlockSeq;
+export { resolveBlockSeq };

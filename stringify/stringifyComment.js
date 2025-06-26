@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * Stringifies a comment.
  *
@@ -19,6 +17,4 @@ const lineComment = (str, indent, comment) => str.endsWith('\n')
         ? '\n' + indentComment(comment, indent)
         : (str.endsWith(' ') ? '' : ' ') + comment;
 
-exports.indentComment = indentComment;
-exports.lineComment = lineComment;
-exports.stringifyComment = stringifyComment;
+export { indentComment, lineComment, stringifyComment };

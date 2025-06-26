@@ -1,8 +1,6 @@
-'use strict';
-
-var Alias = require('../nodes/Alias.js');
-var identity = require('../nodes/identity.js');
-var Scalar = require('../nodes/Scalar.js');
+import { Alias } from '../nodes/Alias.js';
+import { isNode, isPair, MAP, SEQ, isDocument } from '../nodes/identity.js';
+import { Scalar } from '../nodes/Scalar.js';
 
 const defaultTagPrefix = 'tag:yaml.org,2002:';
 function findTagObject(value, tagName, tags) {
@@ -16,12 +14,12 @@ function findTagObject(value, tagName, tags) {
     return tags.find(t => t.identify?.(value) && !t.format);
 }
 function createNode(value, tagName, ctx) {
-    if (identity.isDocument(value))
+    if (isDocument(value))
         value = value.contents;
-    if (identity.isNode(value))
+    if (isNode(value))
         return value;
-    if (identity.isPair(value)) {
-        const map = ctx.schema[identity.MAP].createNode?.(ctx.schema, null, ctx);
+    if (isPair(value)) {
+        const map = ctx.schema[MAP].createNode?.(ctx.schema, null, ctx);
         map.items.push(value);
         return map;
     }
@@ -42,7 +40,7 @@ function createNode(value, tagName, ctx) {
         if (ref) {
             if (!ref.anchor)
                 ref.anchor = onAnchor(value);
-            return new Alias.Alias(ref.anchor);
+            return new Alias(ref.anchor);
         }
         else {
             ref = { anchor: null, node: null };
@@ -58,17 +56,17 @@ function createNode(value, tagName, ctx) {
             value = value.toJSON();
         }
         if (!value || typeof value !== 'object') {
-            const node = new Scalar.Scalar(value);
+            const node = new Scalar(value);
             if (ref)
                 ref.node = node;
             return node;
         }
         tagObj =
             value instanceof Map
-                ? schema[identity.MAP]
+                ? schema[MAP]
                 : Symbol.iterator in Object(value)
-                    ? schema[identity.SEQ]
-                    : schema[identity.MAP];
+                    ? schema[SEQ]
+                    : schema[MAP];
     }
     if (onTagObj) {
         onTagObj(tagObj);
@@ -78,7 +76,7 @@ function createNode(value, tagName, ctx) {
         ? tagObj.createNode(ctx.schema, value, ctx)
         : typeof tagObj?.nodeClass?.from === 'function'
             ? tagObj.nodeClass.from(ctx.schema, value, ctx)
-            : new Scalar.Scalar(value);
+            : new Scalar(value);
     if (tagName)
         node.tag = tagName;
     else if (!tagObj.default)
@@ -88,4 +86,4 @@ function createNode(value, tagName, ctx) {
     return node;
 }
 
-exports.createNode = createNode;
+export { createNode };

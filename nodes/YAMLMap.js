@@ -1,30 +1,28 @@
-'use strict';
-
-var stringifyCollection = require('../stringify/stringifyCollection.js');
-var addPairToJSMap = require('./addPairToJSMap.js');
-var Collection = require('./Collection.js');
-var identity = require('./identity.js');
-var Pair = require('./Pair.js');
-var Scalar = require('./Scalar.js');
+import { stringifyCollection } from '../stringify/stringifyCollection.js';
+import { addPairToJSMap } from './addPairToJSMap.js';
+import { Collection } from './Collection.js';
+import { isPair, isScalar, MAP } from './identity.js';
+import { Pair, createPair } from './Pair.js';
+import { isScalarValue } from './Scalar.js';
 
 function findPair(items, key) {
-    const k = identity.isScalar(key) ? key.value : key;
+    const k = isScalar(key) ? key.value : key;
     for (const it of items) {
-        if (identity.isPair(it)) {
+        if (isPair(it)) {
             if (it.key === key || it.key === k)
                 return it;
-            if (identity.isScalar(it.key) && it.key.value === k)
+            if (isScalar(it.key) && it.key.value === k)
                 return it;
         }
     }
     return undefined;
 }
-class YAMLMap extends Collection.Collection {
+class YAMLMap extends Collection {
     static get tagName() {
         return 'tag:yaml.org,2002:map';
     }
     constructor(schema) {
-        super(identity.MAP, schema);
+        super(MAP, schema);
         this.items = [];
     }
     /**
@@ -40,7 +38,7 @@ class YAMLMap extends Collection.Collection {
             else if (Array.isArray(replacer) && !replacer.includes(key))
                 return;
             if (value !== undefined || keepUndefined)
-                map.items.push(Pair.createPair(key, value, ctx));
+                map.items.push(createPair(key, value, ctx));
         };
         if (obj instanceof Map) {
             for (const [key, value] of obj)
@@ -63,21 +61,21 @@ class YAMLMap extends Collection.Collection {
      */
     add(pair, overwrite) {
         let _pair;
-        if (identity.isPair(pair))
+        if (isPair(pair))
             _pair = pair;
         else if (!pair || typeof pair !== 'object' || !('key' in pair)) {
             // In TypeScript, this never happens.
-            _pair = new Pair.Pair(pair, pair?.value);
+            _pair = new Pair(pair, pair?.value);
         }
         else
-            _pair = new Pair.Pair(pair.key, pair.value);
+            _pair = new Pair(pair.key, pair.value);
         const prev = findPair(this.items, _pair.key);
         const sortEntries = this.schema?.sortMapEntries;
         if (prev) {
             if (!overwrite)
                 throw new Error(`Key ${_pair.key} already set`);
             // For scalars, keep the old node & its comments and anchors
-            if (identity.isScalar(prev.value) && Scalar.isScalarValue(_pair.value))
+            if (isScalar(prev.value) && isScalarValue(_pair.value))
                 prev.value.value = _pair.value;
             else
                 prev.value = _pair.value;
@@ -103,13 +101,13 @@ class YAMLMap extends Collection.Collection {
     get(key, keepScalar) {
         const it = findPair(this.items, key);
         const node = it?.value;
-        return (!keepScalar && identity.isScalar(node) ? node.value : node) ?? undefined;
+        return (!keepScalar && isScalar(node) ? node.value : node) ?? undefined;
     }
     has(key) {
         return !!findPair(this.items, key);
     }
     set(key, value) {
-        this.add(new Pair.Pair(key, value), true);
+        this.add(new Pair(key, value), true);
     }
     /**
      * @param ctx - Conversion context, originally set in Document#toJS()
@@ -121,19 +119,19 @@ class YAMLMap extends Collection.Collection {
         if (ctx?.onCreate)
             ctx.onCreate(map);
         for (const item of this.items)
-            addPairToJSMap.addPairToJSMap(ctx, map, item);
+            addPairToJSMap(ctx, map, item);
         return map;
     }
     toString(ctx, onComment, onChompKeep) {
         if (!ctx)
             return JSON.stringify(this);
         for (const item of this.items) {
-            if (!identity.isPair(item))
+            if (!isPair(item))
                 throw new Error(`Map items must all be pairs; found ${JSON.stringify(item)} instead`);
         }
         if (!ctx.allNullValues && this.hasAllNullValues(false))
             ctx = Object.assign({}, ctx, { allNullValues: true });
-        return stringifyCollection.stringifyCollection(this, ctx, {
+        return stringifyCollection(this, ctx, {
             blockItemPrefix: '',
             flowChars: { start: '{', end: '}' },
             itemIndent: ctx.indent || '',
@@ -143,5 +141,4 @@ class YAMLMap extends Collection.Collection {
     }
 }
 
-exports.YAMLMap = YAMLMap;
-exports.findPair = findPair;
+export { YAMLMap, findPair };

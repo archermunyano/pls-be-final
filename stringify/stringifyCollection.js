@@ -1,8 +1,6 @@
-'use strict';
-
-var identity = require('../nodes/identity.js');
-var stringify = require('./stringify.js');
-var stringifyComment = require('./stringifyComment.js');
+import { isNode, isPair } from '../nodes/identity.js';
+import { stringify } from './stringify.js';
+import { lineComment, indentComment } from './stringifyComment.js';
 
 function stringifyCollection(collection, ctx, options) {
     const flow = ctx.inFlow ?? collection.flow;
@@ -17,15 +15,15 @@ function stringifyBlockCollection({ comment, items }, ctx, { blockItemPrefix, fl
     for (let i = 0; i < items.length; ++i) {
         const item = items[i];
         let comment = null;
-        if (identity.isNode(item)) {
+        if (isNode(item)) {
             if (!chompKeep && item.spaceBefore)
                 lines.push('');
             addCommentBefore(ctx, lines, item.commentBefore, chompKeep);
             if (item.comment)
                 comment = item.comment;
         }
-        else if (identity.isPair(item)) {
-            const ik = identity.isNode(item.key) ? item.key : null;
+        else if (isPair(item)) {
+            const ik = isNode(item.key) ? item.key : null;
             if (ik) {
                 if (!chompKeep && ik.spaceBefore)
                     lines.push('');
@@ -33,9 +31,9 @@ function stringifyBlockCollection({ comment, items }, ctx, { blockItemPrefix, fl
             }
         }
         chompKeep = false;
-        let str = stringify.stringify(item, itemCtx, () => (comment = null), () => (chompKeep = true));
+        let str = stringify(item, itemCtx, () => (comment = null), () => (chompKeep = true));
         if (comment)
-            str += stringifyComment.lineComment(str, itemIndent, commentString(comment));
+            str += lineComment(str, itemIndent, commentString(comment));
         if (chompKeep && comment)
             chompKeep = false;
         lines.push(blockItemPrefix + str);
@@ -52,7 +50,7 @@ function stringifyBlockCollection({ comment, items }, ctx, { blockItemPrefix, fl
         }
     }
     if (comment) {
-        str += '\n' + stringifyComment.indentComment(commentString(comment), indent);
+        str += '\n' + indentComment(commentString(comment), indent);
         if (onComment)
             onComment();
     }
@@ -74,15 +72,15 @@ function stringifyFlowCollection({ items }, ctx, { flowChars, itemIndent }) {
     for (let i = 0; i < items.length; ++i) {
         const item = items[i];
         let comment = null;
-        if (identity.isNode(item)) {
+        if (isNode(item)) {
             if (item.spaceBefore)
                 lines.push('');
             addCommentBefore(ctx, lines, item.commentBefore, false);
             if (item.comment)
                 comment = item.comment;
         }
-        else if (identity.isPair(item)) {
-            const ik = identity.isNode(item.key) ? item.key : null;
+        else if (isPair(item)) {
+            const ik = isNode(item.key) ? item.key : null;
             if (ik) {
                 if (ik.spaceBefore)
                     lines.push('');
@@ -90,7 +88,7 @@ function stringifyFlowCollection({ items }, ctx, { flowChars, itemIndent }) {
                 if (ik.comment)
                     reqNewline = true;
             }
-            const iv = identity.isNode(item.value) ? item.value : null;
+            const iv = isNode(item.value) ? item.value : null;
             if (iv) {
                 if (iv.comment)
                     comment = iv.comment;
@@ -103,11 +101,11 @@ function stringifyFlowCollection({ items }, ctx, { flowChars, itemIndent }) {
         }
         if (comment)
             reqNewline = true;
-        let str = stringify.stringify(item, itemCtx, () => (comment = null));
+        let str = stringify(item, itemCtx, () => (comment = null));
         if (i < items.length - 1)
             str += ',';
         if (comment)
-            str += stringifyComment.lineComment(str, itemIndent, commentString(comment));
+            str += lineComment(str, itemIndent, commentString(comment));
         if (!reqNewline && (lines.length > linesAtValue || str.includes('\n')))
             reqNewline = true;
         lines.push(str);
@@ -137,9 +135,9 @@ function addCommentBefore({ indent, options: { commentString } }, lines, comment
     if (comment && chompKeep)
         comment = comment.replace(/^\n+/, '');
     if (comment) {
-        const ic = stringifyComment.indentComment(commentString(comment), indent);
+        const ic = indentComment(commentString(comment), indent);
         lines.push(ic.trimStart()); // Avoid double indent on first line
     }
 }
 
-exports.stringifyCollection = stringifyCollection;
+export { stringifyCollection };

@@ -1,15 +1,13 @@
-'use strict';
-
-var Pair = require('../nodes/Pair.js');
-var YAMLMap = require('../nodes/YAMLMap.js');
-var resolveProps = require('./resolve-props.js');
-var utilContainsNewline = require('./util-contains-newline.js');
-var utilFlowIndentCheck = require('./util-flow-indent-check.js');
-var utilMapIncludes = require('./util-map-includes.js');
+import { Pair } from '../nodes/Pair.js';
+import { YAMLMap } from '../nodes/YAMLMap.js';
+import { resolveProps } from './resolve-props.js';
+import { containsNewline } from './util-contains-newline.js';
+import { flowIndentCheck } from './util-flow-indent-check.js';
+import { mapIncludes } from './util-map-includes.js';
 
 const startColMsg = 'All mapping items must start at the same column';
 function resolveBlockMap({ composeNode, composeEmptyNode }, ctx, bm, onError, tag) {
-    const NodeClass = tag?.nodeClass ?? YAMLMap.YAMLMap;
+    const NodeClass = tag?.nodeClass ?? YAMLMap;
     const map = new NodeClass(ctx.schema);
     if (ctx.atRoot)
         ctx.atRoot = false;
@@ -18,7 +16,7 @@ function resolveBlockMap({ composeNode, composeEmptyNode }, ctx, bm, onError, ta
     for (const collItem of bm.items) {
         const { start, key, sep, value } = collItem;
         // key properties
-        const keyProps = resolveProps.resolveProps(start, {
+        const keyProps = resolveProps(start, {
             indicator: 'explicit-key-ind',
             next: key ?? sep?.[0],
             offset,
@@ -44,7 +42,7 @@ function resolveBlockMap({ composeNode, composeEmptyNode }, ctx, bm, onError, ta
                 }
                 continue;
             }
-            if (keyProps.newlineAfterProp || utilContainsNewline.containsNewline(key)) {
+            if (keyProps.newlineAfterProp || containsNewline(key)) {
                 onError(key ?? start[start.length - 1], 'MULTILINE_IMPLICIT_KEY', 'Implicit keys need to be on a single line');
             }
         }
@@ -58,12 +56,12 @@ function resolveBlockMap({ composeNode, composeEmptyNode }, ctx, bm, onError, ta
             ? composeNode(ctx, key, keyProps, onError)
             : composeEmptyNode(ctx, keyStart, start, null, keyProps, onError);
         if (ctx.schema.compat)
-            utilFlowIndentCheck.flowIndentCheck(bm.indent, key, onError);
+            flowIndentCheck(bm.indent, key, onError);
         ctx.atKey = false;
-        if (utilMapIncludes.mapIncludes(ctx, map.items, keyNode))
+        if (mapIncludes(ctx, map.items, keyNode))
             onError(keyStart, 'DUPLICATE_KEY', 'Map keys must be unique');
         // value properties
-        const valueProps = resolveProps.resolveProps(sep ?? [], {
+        const valueProps = resolveProps(sep ?? [], {
             indicator: 'map-value-ind',
             next: value,
             offset: keyNode.range[2],
@@ -85,9 +83,9 @@ function resolveBlockMap({ composeNode, composeEmptyNode }, ctx, bm, onError, ta
                 ? composeNode(ctx, value, valueProps, onError)
                 : composeEmptyNode(ctx, offset, sep, null, valueProps, onError);
             if (ctx.schema.compat)
-                utilFlowIndentCheck.flowIndentCheck(bm.indent, value, onError);
+                flowIndentCheck(bm.indent, value, onError);
             offset = valueNode.range[2];
-            const pair = new Pair.Pair(keyNode, valueNode);
+            const pair = new Pair(keyNode, valueNode);
             if (ctx.options.keepSourceTokens)
                 pair.srcToken = collItem;
             map.items.push(pair);
@@ -102,7 +100,7 @@ function resolveBlockMap({ composeNode, composeEmptyNode }, ctx, bm, onError, ta
                 else
                     keyNode.comment = valueProps.comment;
             }
-            const pair = new Pair.Pair(keyNode);
+            const pair = new Pair(keyNode);
             if (ctx.options.keepSourceTokens)
                 pair.srcToken = collItem;
             map.items.push(pair);
@@ -114,4 +112,4 @@ function resolveBlockMap({ composeNode, composeEmptyNode }, ctx, bm, onError, ta
     return map;
 }
 
-exports.resolveBlockMap = resolveBlockMap;
+export { resolveBlockMap };

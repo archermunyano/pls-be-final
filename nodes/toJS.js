@@ -1,6 +1,4 @@
-'use strict';
-
-var identity = require('./identity.js');
+import { hasAnchor } from './identity.js';
 
 /**
  * Recursively convert any node or its contents to native JavaScript
@@ -18,7 +16,7 @@ function toJS(value, arg, ctx) {
         return value.map((v, i) => toJS(v, String(i), ctx));
     if (value && typeof value.toJSON === 'function') {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-        if (!ctx || !identity.hasAnchor(value))
+        if (!ctx || !hasAnchor(value))
             return value.toJSON(arg, ctx);
         const data = { aliasCount: 0, count: 1, res: undefined };
         ctx.anchors.set(value, data);
@@ -36,4 +34,4 @@ function toJS(value, arg, ctx) {
     return value;
 }
 
-exports.toJS = toJS;
+export { toJS };

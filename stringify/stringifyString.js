@@ -1,7 +1,5 @@
-'use strict';
-
-var Scalar = require('../nodes/Scalar.js');
-var foldFlowLines = require('./foldFlowLines.js');
+import { Scalar } from '../nodes/Scalar.js';
+import { foldFlowLines, FOLD_QUOTED, FOLD_FLOW, FOLD_BLOCK } from './foldFlowLines.js';
 
 const getFoldOptions = (ctx, isBlock) => ({
     indentAtStart: isBlock ? ctx.indent.length : ctx.indentAtStart,
@@ -117,7 +115,7 @@ function doubleQuotedString(value, ctx) {
     str = start ? str + json.slice(start) : json;
     return implicitKey
         ? str
-        : foldFlowLines.foldFlowLines(str, indent, foldFlowLines.FOLD_QUOTED, getFoldOptions(ctx, false));
+        : foldFlowLines(str, indent, FOLD_QUOTED, getFoldOptions(ctx, false));
 }
 function singleQuotedString(value, ctx) {
     if (ctx.options.singleQuote === false ||
@@ -129,7 +127,7 @@ function singleQuotedString(value, ctx) {
     const res = "'" + value.replace(/'/g, "''").replace(/\n+/g, `$&\n${indent}`) + "'";
     return ctx.implicitKey
         ? res
-        : foldFlowLines.foldFlowLines(res, indent, foldFlowLines.FOLD_FLOW, getFoldOptions(ctx, false));
+        : foldFlowLines(res, indent, FOLD_FLOW, getFoldOptions(ctx, false));
 }
 function quotedString(value, ctx) {
     const { singleQuote } = ctx.options;
@@ -168,9 +166,9 @@ function blockString({ comment, type, value }, ctx, onComment, onChompKeep) {
         (ctx.forceBlockIndent || containsDocumentMarker(value) ? '  ' : '');
     const literal = blockQuote === 'literal'
         ? true
-        : blockQuote === 'folded' || type === Scalar.Scalar.BLOCK_FOLDED
+        : blockQuote === 'folded' || type === Scalar.BLOCK_FOLDED
             ? false
-            : type === Scalar.Scalar.BLOCK_LITERAL
+            : type === Scalar.BLOCK_LITERAL
                 ? true
                 : !lineLengthOverLimit(value, lineWidth, indent.length);
     if (!value)
@@ -236,12 +234,12 @@ function blockString({ comment, type, value }, ctx, onComment, onChompKeep) {
             .replace(/\n+/g, `$&${indent}`);
         let literalFallback = false;
         const foldOptions = getFoldOptions(ctx, true);
-        if (blockQuote !== 'folded' && type !== Scalar.Scalar.BLOCK_FOLDED) {
+        if (blockQuote !== 'folded' && type !== Scalar.BLOCK_FOLDED) {
             foldOptions.onOverflow = () => {
                 literalFallback = true;
             };
         }
-        const body = foldFlowLines.foldFlowLines(`${start}${foldedValue}${end}`, indent, foldFlowLines.FOLD_BLOCK, foldOptions);
+        const body = foldFlowLines(`${start}${foldedValue}${end}`, indent, FOLD_BLOCK, foldOptions);
         if (!literalFallback)
             return `>${header}\n${indent}${body}`;
     }
@@ -269,7 +267,7 @@ function plainString(item, ctx, onComment, onChompKeep) {
     }
     if (!implicitKey &&
         !inFlow &&
-        type !== Scalar.Scalar.PLAIN &&
+        type !== Scalar.PLAIN &&
         value.includes('\n')) {
         // Where allowed & type not set explicitly, prefer block style for multiline strings
         return blockString(item, ctx, onComment, onChompKeep);
@@ -295,7 +293,7 @@ function plainString(item, ctx, onComment, onChompKeep) {
     }
     return implicitKey
         ? str
-        : foldFlowLines.foldFlowLines(str, indent, foldFlowLines.FOLD_FLOW, getFoldOptions(ctx, false));
+        : foldFlowLines(str, indent, FOLD_FLOW, getFoldOptions(ctx, false));
 }
 function stringifyString(item, ctx, onComment, onChompKeep) {
     const { implicitKey, inFlow } = ctx;
@@ -303,23 +301,23 @@ function stringifyString(item, ctx, onComment, onChompKeep) {
         ? item
         : Object.assign({}, item, { value: String(item.value) });
     let { type } = item;
-    if (type !== Scalar.Scalar.QUOTE_DOUBLE) {
+    if (type !== Scalar.QUOTE_DOUBLE) {
         // force double quotes on control characters & unpaired surrogates
         if (/[\x00-\x08\x0b-\x1f\x7f-\x9f\u{D800}-\u{DFFF}]/u.test(ss.value))
-            type = Scalar.Scalar.QUOTE_DOUBLE;
+            type = Scalar.QUOTE_DOUBLE;
     }
     const _stringify = (_type) => {
         switch (_type) {
-            case Scalar.Scalar.BLOCK_FOLDED:
-            case Scalar.Scalar.BLOCK_LITERAL:
+            case Scalar.BLOCK_FOLDED:
+            case Scalar.BLOCK_LITERAL:
                 return implicitKey || inFlow
                     ? quotedString(ss.value, ctx) // blocks are not valid inside flow containers
                     : blockString(ss, ctx, onComment, onChompKeep);
-            case Scalar.Scalar.QUOTE_DOUBLE:
+            case Scalar.QUOTE_DOUBLE:
                 return doubleQuotedString(ss.value, ctx);
-            case Scalar.Scalar.QUOTE_SINGLE:
+            case Scalar.QUOTE_SINGLE:
                 return singleQuotedString(ss.value, ctx);
-            case Scalar.Scalar.PLAIN:
+            case Scalar.PLAIN:
                 return plainString(ss, ctx, onComment, onChompKeep);
             default:
                 return null;
@@ -336,4 +334,4 @@ function stringifyString(item, ctx, onComment, onChompKeep) {
     return res;
 }
 
-exports.stringifyString = stringifyString;
+export { stringifyString };

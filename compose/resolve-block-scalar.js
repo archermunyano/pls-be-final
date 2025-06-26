@@ -1,13 +1,11 @@
-'use strict';
-
-var Scalar = require('../nodes/Scalar.js');
+import { Scalar } from '../nodes/Scalar.js';
 
 function resolveBlockScalar(ctx, scalar, onError) {
     const start = scalar.offset;
     const header = parseBlockScalarHeader(scalar, ctx.options.strict, onError);
     if (!header)
         return { value: '', type: null, comment: '', range: [start, start, start] };
-    const type = header.mode === '>' ? Scalar.Scalar.BLOCK_FOLDED : Scalar.Scalar.BLOCK_LITERAL;
+    const type = header.mode === '>' ? Scalar.BLOCK_FOLDED : Scalar.BLOCK_LITERAL;
     const lines = scalar.source ? splitLines(scalar.source) : [];
     // determine the end of content & start of chomping
     let chompStart = lines.length;
@@ -80,7 +78,7 @@ function resolveBlockScalar(ctx, scalar, onError) {
             onError(offset - content.length - (crlf ? 2 : 1), 'BAD_INDENT', message);
             indent = '';
         }
-        if (type === Scalar.Scalar.BLOCK_LITERAL) {
+        if (type === Scalar.BLOCK_LITERAL) {
             value += sep + indent.slice(trimIndent) + content;
             sep = '\n';
         }
@@ -197,4 +195,4 @@ function splitLines(source) {
     return lines;
 }
 
-exports.resolveBlockScalar = resolveBlockScalar;
+export { resolveBlockScalar };

@@ -1,9 +1,7 @@
-'use strict';
-
-var resolveBlockScalar = require('../compose/resolve-block-scalar.js');
-var resolveFlowScalar = require('../compose/resolve-flow-scalar.js');
-var errors = require('../errors.js');
-var stringifyString = require('../stringify/stringifyString.js');
+import { resolveBlockScalar } from '../compose/resolve-block-scalar.js';
+import { resolveFlowScalar } from '../compose/resolve-flow-scalar.js';
+import { YAMLParseError } from '../errors.js';
+import { stringifyString } from '../stringify/stringifyString.js';
 
 function resolveAsScalar(token, strict = true, onError) {
     if (token) {
@@ -12,15 +10,15 @@ function resolveAsScalar(token, strict = true, onError) {
             if (onError)
                 onError(offset, code, message);
             else
-                throw new errors.YAMLParseError([offset, offset + 1], code, message);
+                throw new YAMLParseError([offset, offset + 1], code, message);
         };
         switch (token.type) {
             case 'scalar':
             case 'single-quoted-scalar':
             case 'double-quoted-scalar':
-                return resolveFlowScalar.resolveFlowScalar(token, strict, _onError);
+                return resolveFlowScalar(token, strict, _onError);
             case 'block-scalar':
-                return resolveBlockScalar.resolveBlockScalar({ options: { strict } }, token, _onError);
+                return resolveBlockScalar({ options: { strict } }, token, _onError);
         }
     }
     return null;
@@ -41,7 +39,7 @@ function resolveAsScalar(token, strict = true, onError) {
  */
 function createScalarToken(value, context) {
     const { implicitKey = false, indent, inFlow = false, offset = -1, type = 'PLAIN' } = context;
-    const source = stringifyString.stringifyString({ type, value }, {
+    const source = stringifyString({ type, value }, {
         implicitKey,
         indent: indent > 0 ? ' '.repeat(indent) : '',
         inFlow,
@@ -110,7 +108,7 @@ function setScalarValue(token, value, context = {}) {
             default:
                 type = 'PLAIN';
         }
-    const source = stringifyString.stringifyString({ type, value }, {
+    const source = stringifyString({ type, value }, {
         implicitKey: implicitKey || indent === null,
         indent: indent !== null && indent > 0 ? ' '.repeat(indent) : '',
         inFlow,
@@ -213,6 +211,4 @@ function setFlowScalarValue(token, source, type) {
     }
 }
 
-exports.createScalarToken = createScalarToken;
-exports.resolveAsScalar = resolveAsScalar;
-exports.setScalarValue = setScalarValue;
+export { createScalarToken, resolveAsScalar, setScalarValue };

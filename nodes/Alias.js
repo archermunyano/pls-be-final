@@ -1,14 +1,12 @@
-'use strict';
+import { anchorIsValid } from '../doc/anchors.js';
+import { visit } from '../visit.js';
+import { ALIAS, isAlias, isCollection, isPair } from './identity.js';
+import { NodeBase } from './Node.js';
+import { toJS } from './toJS.js';
 
-var anchors = require('../doc/anchors.js');
-var visit = require('../visit.js');
-var identity = require('./identity.js');
-var Node = require('./Node.js');
-var toJS = require('./toJS.js');
-
-class Alias extends Node.NodeBase {
+class Alias extends NodeBase {
     constructor(source) {
-        super(identity.ALIAS);
+        super(ALIAS);
         this.source = source;
         Object.defineProperty(this, 'tag', {
             set() {
@@ -22,10 +20,10 @@ class Alias extends Node.NodeBase {
      */
     resolve(doc) {
         let found = undefined;
-        visit.visit(doc, {
+        visit(doc, {
             Node: (_key, node) => {
                 if (node === this)
-                    return visit.visit.BREAK;
+                    return visit.BREAK;
                 if (node.anchor === this.source)
                     found = node;
             }
@@ -44,7 +42,7 @@ class Alias extends Node.NodeBase {
         let data = anchors.get(source);
         if (!data) {
             // Resolve anchors for Node.prototype.toJS()
-            toJS.toJS(source, null, ctx);
+            toJS(source, null, ctx);
             data = anchors.get(source);
         }
         /* istanbul ignore if */
@@ -66,7 +64,7 @@ class Alias extends Node.NodeBase {
     toString(ctx, _onComment, _onChompKeep) {
         const src = `*${this.source}`;
         if (ctx) {
-            anchors.anchorIsValid(this.source);
+            anchorIsValid(this.source);
             if (ctx.options.verifyAliasOrder && !ctx.anchors.has(this.source)) {
                 const msg = `Unresolved alias (the anchor must be set before the alias): ${this.source}`;
                 throw new Error(msg);
@@ -78,12 +76,12 @@ class Alias extends Node.NodeBase {
     }
 }
 function getAliasCount(doc, node, anchors) {
-    if (identity.isAlias(node)) {
+    if (isAlias(node)) {
         const source = node.resolve(doc);
         const anchor = anchors && source && anchors.get(source);
         return anchor ? anchor.count * anchor.aliasCount : 0;
     }
-    else if (identity.isCollection(node)) {
+    else if (isCollection(node)) {
         let count = 0;
         for (const item of node.items) {
             const c = getAliasCount(doc, item, anchors);
@@ -92,7 +90,7 @@ function getAliasCount(doc, node, anchors) {
         }
         return count;
     }
-    else if (identity.isPair(node)) {
+    else if (isPair(node)) {
         const kc = getAliasCount(doc, node.key, anchors);
         const vc = getAliasCount(doc, node.value, anchors);
         return Math.max(kc, vc);
@@ -100,4 +98,4 @@ function getAliasCount(doc, node, anchors) {
     return 1;
 }
 
-exports.Alias = Alias;
+export { Alias };

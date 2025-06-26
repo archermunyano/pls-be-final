@@ -1,19 +1,17 @@
-'use strict';
-
-var identity = require('../nodes/identity.js');
-var Scalar = require('../nodes/Scalar.js');
-var YAMLMap = require('../nodes/YAMLMap.js');
-var YAMLSeq = require('../nodes/YAMLSeq.js');
-var resolveBlockMap = require('./resolve-block-map.js');
-var resolveBlockSeq = require('./resolve-block-seq.js');
-var resolveFlowCollection = require('./resolve-flow-collection.js');
+import { isNode } from '../nodes/identity.js';
+import { Scalar } from '../nodes/Scalar.js';
+import { YAMLMap } from '../nodes/YAMLMap.js';
+import { YAMLSeq } from '../nodes/YAMLSeq.js';
+import { resolveBlockMap } from './resolve-block-map.js';
+import { resolveBlockSeq } from './resolve-block-seq.js';
+import { resolveFlowCollection } from './resolve-flow-collection.js';
 
 function resolveCollection(CN, ctx, token, onError, tagName, tag) {
     const coll = token.type === 'block-map'
-        ? resolveBlockMap.resolveBlockMap(CN, ctx, token, onError, tag)
+        ? resolveBlockMap(CN, ctx, token, onError, tag)
         : token.type === 'block-seq'
-            ? resolveBlockSeq.resolveBlockSeq(CN, ctx, token, onError, tag)
-            : resolveFlowCollection.resolveFlowCollection(CN, ctx, token, onError, tag);
+            ? resolveBlockSeq(CN, ctx, token, onError, tag)
+            : resolveFlowCollection(CN, ctx, token, onError, tag);
     const Coll = coll.constructor;
     // If we got a tagName matching the class, or the tag name is '!',
     // then use the tagName from the node class used to create it.
@@ -54,8 +52,8 @@ function composeCollection(CN, ctx, token, props, onError) {
     if (!tagToken ||
         !tagName ||
         tagName === '!' ||
-        (tagName === YAMLMap.YAMLMap.tagName && expType === 'map') ||
-        (tagName === YAMLSeq.YAMLSeq.tagName && expType === 'seq')) {
+        (tagName === YAMLMap.tagName && expType === 'map') ||
+        (tagName === YAMLSeq.tagName && expType === 'seq')) {
         return resolveCollection(CN, ctx, token, onError, tagName);
     }
     let tag = ctx.schema.tags.find(t => t.tag === tagName && t.collection === expType);
@@ -77,9 +75,9 @@ function composeCollection(CN, ctx, token, props, onError) {
     }
     const coll = resolveCollection(CN, ctx, token, onError, tagName, tag);
     const res = tag.resolve?.(coll, msg => onError(tagToken, 'TAG_RESOLVE_FAILED', msg), ctx.options) ?? coll;
-    const node = identity.isNode(res)
+    const node = isNode(res)
         ? res
-        : new Scalar.Scalar(res);
+        : new Scalar(res);
     node.range = coll.range;
     node.tag = tagName;
     if (tag?.format)
@@ -87,4 +85,4 @@ function composeCollection(CN, ctx, token, props, onError) {
     return node;
 }
 
-exports.composeCollection = composeCollection;
+export { composeCollection };

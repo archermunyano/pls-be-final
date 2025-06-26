@@ -1,7 +1,5 @@
-'use strict';
-
-var identity = require('../nodes/identity.js');
-var visit = require('../visit.js');
+import { isNode } from '../nodes/identity.js';
+import { visit } from '../visit.js';
 
 const escapeChars = {
     '!': '%21',
@@ -153,10 +151,10 @@ class Directives {
             : [];
         const tagEntries = Object.entries(this.tags);
         let tagNames;
-        if (doc && tagEntries.length > 0 && identity.isNode(doc.contents)) {
+        if (doc && tagEntries.length > 0 && isNode(doc.contents)) {
             const tags = {};
-            visit.visit(doc.contents, (_key, node) => {
-                if (identity.isNode(node) && node.tag)
+            visit(doc.contents, (_key, node) => {
+                if (isNode(node) && node.tag)
                     tags[node.tag] = true;
             });
             tagNames = Object.keys(tags);
@@ -175,4 +173,4 @@ class Directives {
 Directives.defaultYaml = { explicit: false, version: '1.2' };
 Directives.defaultTags = { '!!': 'tag:yaml.org,2002:' };
 
-exports.Directives = Directives;
+export { Directives };

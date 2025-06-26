@@ -1,18 +1,16 @@
-'use strict';
-
-var identity = require('../nodes/identity.js');
-var Scalar = require('../nodes/Scalar.js');
-var stringify = require('./stringify.js');
-var stringifyComment = require('./stringifyComment.js');
+import { isCollection, isNode, isScalar, isSeq } from '../nodes/identity.js';
+import { Scalar } from '../nodes/Scalar.js';
+import { stringify } from './stringify.js';
+import { lineComment, indentComment } from './stringifyComment.js';
 
 function stringifyPair({ key, value }, ctx, onComment, onChompKeep) {
     const { allNullValues, doc, indent, indentStep, options: { commentString, indentSeq, simpleKeys } } = ctx;
-    let keyComment = (identity.isNode(key) && key.comment) || null;
+    let keyComment = (isNode(key) && key.comment) || null;
     if (simpleKeys) {
         if (keyComment) {
             throw new Error('With simple keys, key nodes cannot have comments');
         }
-        if (identity.isCollection(key) || (!identity.isNode(key) && typeof key === 'object')) {
+        if (isCollection(key) || (!isNode(key) && typeof key === 'object')) {
             const msg = 'With simple keys, collection cannot be used as a key value';
             throw new Error(msg);
         }
@@ -20,9 +18,9 @@ function stringifyPair({ key, value }, ctx, onComment, onChompKeep) {
     let explicitKey = !simpleKeys &&
         (!key ||
             (keyComment && value == null && !ctx.inFlow) ||
-            identity.isCollection(key) ||
-            (identity.isScalar(key)
-                ? key.type === Scalar.Scalar.BLOCK_FOLDED || key.type === Scalar.Scalar.BLOCK_LITERAL
+            isCollection(key) ||
+            (isScalar(key)
+                ? key.type === Scalar.BLOCK_FOLDED || key.type === Scalar.BLOCK_LITERAL
                 : typeof key === 'object'));
     ctx = Object.assign({}, ctx, {
         allNullValues: false,
@@ -31,7 +29,7 @@ function stringifyPair({ key, value }, ctx, onComment, onChompKeep) {
     });
     let keyCommentDone = false;
     let chompKeep = false;
-    let str = stringify.stringify(key, ctx, () => (keyCommentDone = true), () => (chompKeep = true));
+    let str = stringify(key, ctx, () => (keyCommentDone = true), () => (chompKeep = true));
     if (!explicitKey && !ctx.inFlow && str.length > 1024) {
         if (simpleKeys)
             throw new Error('With simple keys, single line scalar must not span more than 1024 characters');
@@ -47,7 +45,7 @@ function stringifyPair({ key, value }, ctx, onComment, onChompKeep) {
     else if ((allNullValues && !simpleKeys) || (value == null && explicitKey)) {
         str = `? ${str}`;
         if (keyComment && !keyCommentDone) {
-            str += stringifyComment.lineComment(str, ctx.indent, commentString(keyComment));
+            str += lineComment(str, ctx.indent, commentString(keyComment));
         }
         else if (chompKeep && onChompKeep)
             onChompKeep();
@@ -57,16 +55,16 @@ function stringifyPair({ key, value }, ctx, onComment, onChompKeep) {
         keyComment = null;
     if (explicitKey) {
         if (keyComment)
-            str += stringifyComment.lineComment(str, ctx.indent, commentString(keyComment));
+            str += lineComment(str, ctx.indent, commentString(keyComment));
         str = `? ${str}\n${indent}:`;
     }
     else {
         str = `${str}:`;
         if (keyComment)
-            str += stringifyComment.lineComment(str, ctx.indent, commentString(keyComment));
+            str += lineComment(str, ctx.indent, commentString(keyComment));
     }
     let vsb, vcb, valueComment;
-    if (identity.isNode(value)) {
+    if (isNode(value)) {
         vsb = !!value.spaceBefore;
         vcb = value.commentBefore;
         valueComment = value.comment;
@@ -79,14 +77,14 @@ function stringifyPair({ key, value }, ctx, onComment, onChompKeep) {
             value = doc.createNode(value);
     }
     ctx.implicitKey = false;
-    if (!explicitKey && !keyComment && identity.isScalar(value))
+    if (!explicitKey && !keyComment && isScalar(value))
         ctx.indentAtStart = str.length + 1;
     chompKeep = false;
     if (!indentSeq &&
         indentStep.length >= 2 &&
         !ctx.inFlow &&
         !explicitKey &&
-        identity.isSeq(value) &&
+        isSeq(value) &&
         !value.flow &&
         !value.tag &&
         !value.anchor) {
@@ -94,13 +92,13 @@ function stringifyPair({ key, value }, ctx, onComment, onChompKeep) {
         ctx.indent = ctx.indent.substring(2);
     }
     let valueCommentDone = false;
-    const valueStr = stringify.stringify(value, ctx, () => (valueCommentDone = true), () => (chompKeep = true));
+    const valueStr = stringify(value, ctx, () => (valueCommentDone = true), () => (chompKeep = true));
     let ws = ' ';
     if (keyComment || vsb || vcb) {
         ws = vsb ? '\n' : '';
         if (vcb) {
             const cs = commentString(vcb);
-            ws += `\n${stringifyComment.indentComment(cs, ctx.indent)}`;
+            ws += `\n${indentComment(cs, ctx.indent)}`;
         }
         if (valueStr === '' && !ctx.inFlow) {
             if (ws === '\n')
@@ -110,7 +108,7 @@ function stringifyPair({ key, value }, ctx, onComment, onChompKeep) {
             ws += `\n${ctx.indent}`;
         }
     }
-    else if (!explicitKey && identity.isCollection(value)) {
+    else if (!explicitKey && isCollection(value)) {
         const vs0 = valueStr[0];
         const nl0 = valueStr.indexOf('\n');
         const hasNewline = nl0 !== -1;
@@ -141,7 +139,7 @@ function stringifyPair({ key, value }, ctx, onComment, onChompKeep) {
             onComment();
     }
     else if (valueComment && !valueCommentDone) {
-        str += stringifyComment.lineComment(str, ctx.indent, commentString(valueComment));
+        str += lineComment(str, ctx.indent, commentString(valueComment));
     }
     else if (chompKeep && onChompKeep) {
         onChompKeep();
@@ -149,4 +147,4 @@ function stringifyPair({ key, value }, ctx, onComment, onChompKeep) {
     return str;
 }
 
-exports.stringifyPair = stringifyPair;
+export { stringifyPair };

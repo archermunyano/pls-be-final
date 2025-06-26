@@ -1,11 +1,9 @@
-'use strict';
-
-var Alias = require('../nodes/Alias.js');
-var identity = require('../nodes/identity.js');
-var composeCollection = require('./compose-collection.js');
-var composeScalar = require('./compose-scalar.js');
-var resolveEnd = require('./resolve-end.js');
-var utilEmptyScalarPosition = require('./util-empty-scalar-position.js');
+import { Alias } from '../nodes/Alias.js';
+import { isScalar } from '../nodes/identity.js';
+import { composeCollection } from './compose-collection.js';
+import { composeScalar } from './compose-scalar.js';
+import { resolveEnd } from './resolve-end.js';
+import { emptyScalarPosition } from './util-empty-scalar-position.js';
 
 const CN = { composeNode, composeEmptyNode };
 function composeNode(ctx, token, props, onError) {
@@ -23,14 +21,14 @@ function composeNode(ctx, token, props, onError) {
         case 'single-quoted-scalar':
         case 'double-quoted-scalar':
         case 'block-scalar':
-            node = composeScalar.composeScalar(ctx, token, tag, onError);
+            node = composeScalar(ctx, token, tag, onError);
             if (anchor)
                 node.anchor = anchor.source.substring(1);
             break;
         case 'block-map':
         case 'block-seq':
         case 'flow-collection':
-            node = composeCollection.composeCollection(CN, ctx, token, props, onError);
+            node = composeCollection(CN, ctx, token, props, onError);
             if (anchor)
                 node.anchor = anchor.source.substring(1);
             break;
@@ -47,7 +45,7 @@ function composeNode(ctx, token, props, onError) {
         onError(anchor, 'BAD_ALIAS', 'Anchor cannot be an empty string');
     if (atKey &&
         ctx.options.stringKeys &&
-        (!identity.isScalar(node) ||
+        (!isScalar(node) ||
             typeof node.value !== 'string' ||
             (node.tag && node.tag !== 'tag:yaml.org,2002:str'))) {
         const msg = 'With stringKeys, all keys must be strings';
@@ -69,11 +67,11 @@ function composeNode(ctx, token, props, onError) {
 function composeEmptyNode(ctx, offset, before, pos, { spaceBefore, comment, anchor, tag, end }, onError) {
     const token = {
         type: 'scalar',
-        offset: utilEmptyScalarPosition.emptyScalarPosition(offset, before, pos),
+        offset: emptyScalarPosition(offset, before, pos),
         indent: -1,
         source: ''
     };
-    const node = composeScalar.composeScalar(ctx, token, tag, onError);
+    const node = composeScalar(ctx, token, tag, onError);
     if (anchor) {
         node.anchor = anchor.source.substring(1);
         if (node.anchor === '')
@@ -88,18 +86,17 @@ function composeEmptyNode(ctx, offset, before, pos, { spaceBefore, comment, anch
     return node;
 }
 function composeAlias({ options }, { offset, source, end }, onError) {
-    const alias = new Alias.Alias(source.substring(1));
+    const alias = new Alias(source.substring(1));
     if (alias.source === '')
         onError(offset, 'BAD_ALIAS', 'Alias cannot be an empty string');
     if (alias.source.endsWith(':'))
         onError(offset + source.length - 1, 'BAD_ALIAS', 'Alias ending in : is ambiguous', true);
     const valueEnd = offset + source.length;
-    const re = resolveEnd.resolveEnd(end, valueEnd, options.strict, onError);
+    const re = resolveEnd(end, valueEnd, options.strict, onError);
     alias.range = [offset, valueEnd, re.offset];
     if (re.comment)
         alias.comment = re.comment;
     return alias;
 }
 
-exports.composeEmptyNode = composeEmptyNode;
-exports.composeNode = composeNode;
+export { composeEmptyNode, composeNode };

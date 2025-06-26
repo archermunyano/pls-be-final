@@ -1,28 +1,11 @@
-'use strict';
-
-var createNode = require('./doc/createNode.js');
-var log = require('./log.js');
-var Pair = require('./nodes/Pair.js');
-var YAMLMap = require('./nodes/YAMLMap.js');
-var toJS = require('./nodes/toJS.js');
-var map = require('./schema/common/map.js');
-var seq = require('./schema/common/seq.js');
-var string = require('./schema/common/string.js');
-var foldFlowLines = require('./stringify/foldFlowLines.js');
-var stringifyNumber = require('./stringify/stringifyNumber.js');
-var stringifyString = require('./stringify/stringifyString.js');
-
-
-
-exports.createNode = createNode.createNode;
-exports.debug = log.debug;
-exports.warn = log.warn;
-exports.createPair = Pair.createPair;
-exports.findPair = YAMLMap.findPair;
-exports.toJS = toJS.toJS;
-exports.mapTag = map.map;
-exports.seqTag = seq.seq;
-exports.stringTag = string.string;
-exports.foldFlowLines = foldFlowLines.foldFlowLines;
-exports.stringifyNumber = stringifyNumber.stringifyNumber;
-exports.stringifyString = stringifyString.stringifyString;
+export { createNode } from './doc/createNode.js';
+export { debug, warn } from './log.js';
+export { createPair } from './nodes/Pair.js';
+export { findPair } from './nodes/YAMLMap.js';
+export { toJS } from './nodes/toJS.js';
+export { map as mapTag } from './schema/common/map.js';
+export { seq as seqTag } from './schema/common/seq.js';
+export { string as stringTag } from './schema/common/string.js';
+export { foldFlowLines } from './stringify/foldFlowLines.js';
+export { stringifyNumber } from './stringify/stringifyNumber.js';
+export { stringifyString } from './stringify/stringifyString.js';

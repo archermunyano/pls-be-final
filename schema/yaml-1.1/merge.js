@@ -1,7 +1,5 @@
-'use strict';
-
-var identity = require('../../nodes/identity.js');
-var Scalar = require('../../nodes/Scalar.js');
+import { isScalar, isAlias, isSeq, isMap } from '../../nodes/identity.js';
+import { Scalar } from '../../nodes/Scalar.js';
 
 // If the value associated with a merge key is a single mapping node, each of
 // its key/value pairs is inserted into the current mapping, unless the key
@@ -17,19 +15,19 @@ const merge = {
     default: 'key',
     tag: 'tag:yaml.org,2002:merge',
     test: /^<<$/,
-    resolve: () => Object.assign(new Scalar.Scalar(Symbol(MERGE_KEY)), {
+    resolve: () => Object.assign(new Scalar(Symbol(MERGE_KEY)), {
         addToJSMap: addMergeToJSMap
     }),
     stringify: () => MERGE_KEY
 };
 const isMergeKey = (ctx, key) => (merge.identify(key) ||
-    (identity.isScalar(key) &&
-        (!key.type || key.type === Scalar.Scalar.PLAIN) &&
+    (isScalar(key) &&
+        (!key.type || key.type === Scalar.PLAIN) &&
         merge.identify(key.value))) &&
     ctx?.doc.schema.tags.some(tag => tag.tag === merge.tag && tag.default);
 function addMergeToJSMap(ctx, map, value) {
-    value = ctx && identity.isAlias(value) ? value.resolve(ctx.doc) : value;
-    if (identity.isSeq(value))
+    value = ctx && isAlias(value) ? value.resolve(ctx.doc) : value;
+    if (isSeq(value))
         for (const it of value.items)
             mergeValue(ctx, map, it);
     else if (Array.isArray(value))
@@ -39,8 +37,8 @@ function addMergeToJSMap(ctx, map, value) {
         mergeValue(ctx, map, value);
 }
 function mergeValue(ctx, map, value) {
-    const source = ctx && identity.isAlias(value) ? value.resolve(ctx.doc) : value;
-    if (!identity.isMap(source))
+    const source = ctx && isAlias(value) ? value.resolve(ctx.doc) : value;
+    if (!isMap(source))
         throw new Error('Merge sources must be maps or map aliases');
     const srcMap = source.toJSON(null, ctx, Map);
     for (const [key, value] of srcMap) {
@@ -63,6 +61,4 @@ function mergeValue(ctx, map, value) {
     return map;
 }
 
-exports.addMergeToJSMap = addMergeToJSMap;
-exports.isMergeKey = isMergeKey;
-exports.merge = merge;
+export { addMergeToJSMap, isMergeKey, merge };

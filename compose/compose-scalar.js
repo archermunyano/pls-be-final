@@ -1,36 +1,34 @@
-'use strict';
-
-var identity = require('../nodes/identity.js');
-var Scalar = require('../nodes/Scalar.js');
-var resolveBlockScalar = require('./resolve-block-scalar.js');
-var resolveFlowScalar = require('./resolve-flow-scalar.js');
+import { isScalar, SCALAR } from '../nodes/identity.js';
+import { Scalar } from '../nodes/Scalar.js';
+import { resolveBlockScalar } from './resolve-block-scalar.js';
+import { resolveFlowScalar } from './resolve-flow-scalar.js';
 
 function composeScalar(ctx, token, tagToken, onError) {
     const { value, type, comment, range } = token.type === 'block-scalar'
-        ? resolveBlockScalar.resolveBlockScalar(ctx, token, onError)
-        : resolveFlowScalar.resolveFlowScalar(token, ctx.options.strict, onError);
+        ? resolveBlockScalar(ctx, token, onError)
+        : resolveFlowScalar(token, ctx.options.strict, onError);
     const tagName = tagToken
         ? ctx.directives.tagName(tagToken.source, msg => onError(tagToken, 'TAG_RESOLVE_FAILED', msg))
         : null;
     let tag;
     if (ctx.options.stringKeys && ctx.atKey) {
-        tag = ctx.schema[identity.SCALAR];
+        tag = ctx.schema[SCALAR];
     }
     else if (tagName)
         tag = findScalarTagByName(ctx.schema, value, tagName, tagToken, onError);
     else if (token.type === 'scalar')
         tag = findScalarTagByTest(ctx, value, token, onError);
     else
-        tag = ctx.schema[identity.SCALAR];
+        tag = ctx.schema[SCALAR];
     let scalar;
     try {
         const res = tag.resolve(value, msg => onError(tagToken ?? token, 'TAG_RESOLVE_FAILED', msg), ctx.options);
-        scalar = identity.isScalar(res) ? res : new Scalar.Scalar(res);
+        scalar = isScalar(res) ? res : new Scalar(res);
     }
     catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         onError(tagToken ?? token, 'TAG_RESOLVE_FAILED', msg);
-        scalar = new Scalar.Scalar(value);
+        scalar = new Scalar(value);
     }
     scalar.range = range;
     scalar.source = value;
@@ -46,7 +44,7 @@ function composeScalar(ctx, token, tagToken, onError) {
 }
 function findScalarTagByName(schema, value, tagName, tagToken, onError) {
     if (tagName === '!')
-        return schema[identity.SCALAR]; // non-specific tag
+        return schema[SCALAR]; // non-specific tag
     const matchWithTest = [];
     for (const tag of schema.tags) {
         if (!tag.collection && tag.tag === tagName) {
@@ -67,14 +65,14 @@ function findScalarTagByName(schema, value, tagName, tagToken, onError) {
         return kt;
     }
     onError(tagToken, 'TAG_RESOLVE_FAILED', `Unresolved tag: ${tagName}`, tagName !== 'tag:yaml.org,2002:str');
-    return schema[identity.SCALAR];
+    return schema[SCALAR];
 }
 function findScalarTagByTest({ atKey, directives, schema }, value, token, onError) {
     const tag = schema.tags.find(tag => (tag.default === true || (atKey && tag.default === 'key')) &&
-        tag.test?.test(value)) || schema[identity.SCALAR];
+        tag.test?.test(value)) || schema[SCALAR];
     if (schema.compat) {
         const compat = schema.compat.find(tag => tag.default && tag.test?.test(value)) ??
-            schema[identity.SCALAR];
+            schema[SCALAR];
         if (tag.tag !== compat.tag) {
             const ts = directives.tagString(tag.tag);
             const cs = directives.tagString(compat.tag);
@@ -85,4 +83,4 @@ function findScalarTagByTest({ atKey, directives, schema }, value, token, onErro
     return tag;
 }
 
-exports.composeScalar = composeScalar;
+export { composeScalar };

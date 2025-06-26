@@ -1,7 +1,5 @@
-'use strict';
-
-var Scalar = require('../../nodes/Scalar.js');
-var stringifyNumber = require('../../stringify/stringifyNumber.js');
+import { Scalar } from '../../nodes/Scalar.js';
+import { stringifyNumber } from '../../stringify/stringifyNumber.js';
 
 const floatNaN = {
     identify: value => typeof value === 'number',
@@ -13,7 +11,7 @@ const floatNaN = {
         : str[0] === '-'
             ? Number.NEGATIVE_INFINITY
             : Number.POSITIVE_INFINITY,
-    stringify: stringifyNumber.stringifyNumber
+    stringify: stringifyNumber
 };
 const floatExp = {
     identify: value => typeof value === 'number',
@@ -24,7 +22,7 @@ const floatExp = {
     resolve: (str) => parseFloat(str.replace(/_/g, '')),
     stringify(node) {
         const num = Number(node.value);
-        return isFinite(num) ? num.toExponential() : stringifyNumber.stringifyNumber(node);
+        return isFinite(num) ? num.toExponential() : stringifyNumber(node);
     }
 };
 const float = {
@@ -33,7 +31,7 @@ const float = {
     tag: 'tag:yaml.org,2002:float',
     test: /^[-+]?(?:[0-9][0-9_]*)?\.[0-9_]*$/,
     resolve(str) {
-        const node = new Scalar.Scalar(parseFloat(str.replace(/_/g, '')));
+        const node = new Scalar(parseFloat(str.replace(/_/g, '')));
         const dot = str.indexOf('.');
         if (dot !== -1) {
             const f = str.substring(dot + 1).replace(/_/g, '');
@@ -42,9 +40,7 @@ const float = {
         }
         return node;
     },
-    stringify: stringifyNumber.stringifyNumber
+    stringify: stringifyNumber
 };
 
-exports.float = float;
-exports.floatExp = floatExp;
-exports.floatNaN = floatNaN;
+export { float, floatExp, floatNaN };
